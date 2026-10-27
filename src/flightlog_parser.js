@@ -635,6 +635,20 @@ export function FlightLogParser(logData) {
    * Parse "Firmware revision" header value and set firmware type/version in sysConfig
    */
   const parseFirmwareRevision = (fieldValue) => {
+    // Adaflight logs follow the Betaflight log format of the release each Adaflight version is ported from.
+    const ADAFLIGHT_LOG_FORMATS = [["0.1", "2026.12.0"]];
+    const adaMatches = /Adaflight\s+(\d+)\.(\d+)/i.exec(fieldValue);
+    if (adaMatches != null) {
+      const release = `${Number.parseInt(adaMatches[1], 10)}.${Number.parseInt(adaMatches[2], 10)}`;
+      const format = (ADAFLIGHT_LOG_FORMATS.find(([version]) => version === release) ?? ADAFLIGHT_LOG_FORMATS.at(-1))[1];
+      const [year, month, patch] = format.split(".");
+      this.sysConfig.firmwareType = FIRMWARE_TYPE_BETAFLIGHT;
+      this.sysConfig.firmware = `${year}.${month}`;
+      this.sysConfig.firmwarePatch = Number.parseInt(patch, 10);
+      this.sysConfig.firmwareVersion = format;
+      return;
+    }
+
     // Extract the firmware revision in case of Betaflight/Raceflight/Cleanflight 2.x/Other
     const fwMatches = /((?:Beta|Race|Clean|Base|Butter)flight)\s+(\d+)\.(\d+)(?:\.(\d+))?/i.exec(fieldValue);
     const FIRMWARE_NAME_MAP = {
